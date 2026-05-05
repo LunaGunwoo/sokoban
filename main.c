@@ -13,6 +13,7 @@ void show_complete_screen();
 void flush_stdin_line();
 bool validate_map(char[SIZE][SIZE]);
 void show_playing_map(char[], int, char[SIZE][SIZE]);
+void show_help();
 
 int main(void) {
   char maps[MAX_LEVEL][SIZE][SIZE] = {{
@@ -113,8 +114,14 @@ int main(void) {
 
   bool is_first_game = true;
   bool is_gone_next_level = false;
+  bool is_showing_help = false;
+  bool is_again = false;
+  bool is_new = false;
   while (1) {
-    show_playing_map(name, playing_level, playing_map);
+    if (is_showing_help)
+      show_help();
+    else
+      show_playing_map(name, playing_level + 1, playing_map);
 
     // >>> 참고 메시지 >>>
     if (is_first_game) {
@@ -123,6 +130,12 @@ int main(void) {
     } else if (is_gone_next_level) {
       is_gone_next_level = false;
       printf("You are in the level %d, now.\n", playing_level);
+    } else if (is_again) {
+      is_again = false;
+      printf("Again\n");
+    } else if (is_new) {
+      is_new = false;
+      printf("Replay from level %d\n", playing_level + 1);
     }
     // <<< 참고 메시지 <<<
 
@@ -187,6 +200,22 @@ int main(void) {
       case 'l':
         dx = 1;
         break;
+      case 'd':
+        is_showing_help = true;
+        break;
+      case '\n':
+        is_showing_help = false;
+        break;
+      case 'x':
+        printf("Good bye\n");
+        return 0;
+        break;
+      case 'a':
+        is_again = true;
+        break;
+      case 'n':
+        is_new = true;
+        break;
     }
     // <<< user 입력 <<<
 
@@ -221,7 +250,50 @@ int main(void) {
       if (left_box_cnt == 0)
         is_complete_level = true;  // Level Clear는 while 문 다시 시작할 때 처리
     }  // <<< 이동 조작키를 눌렀을 때 <<<
+    else if (is_again) {
+      // >>> maps -> playing_map copy & player 위치 준비 >>>
+      // only depend on (playing_level)
+      left_box_cnt = 0;
+      is_complete_level = false;
+      for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+          playing_map[i][j] = maps[playing_level][i][j];
+          if (playing_map[i][j] == '@') {
+            player_y = i, player_x = j;
+          }
+          if (playing_map[i][j] == 'O') {
+            box_dest_map[i][j] = true;
+            left_box_cnt++;
+          } else {
+            box_dest_map[i][j] = false;
+          }
+        }
+      }
+      // <<< maps -> playing_map copy & player 위치 준비 <<<
+    } else if (is_new) {
+      playing_level = 0;
+      // >>> maps -> playing_map copy & player 위치 준비 >>>
+      // only depend on (playing_level)
+      left_box_cnt = 0;
+      is_complete_level = false;
+      for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+          playing_map[i][j] = maps[playing_level][i][j];
+          if (playing_map[i][j] == '@') {
+            player_y = i, player_x = j;
+          }
+          if (playing_map[i][j] == 'O') {
+            box_dest_map[i][j] = true;
+            left_box_cnt++;
+          } else {
+            box_dest_map[i][j] = false;
+          }
+        }
+      }
+      // <<< maps -> playing_map copy & player 위치 준비 <<<
+    }
   }
+
   return 0;
 }
 
@@ -290,4 +362,16 @@ void show_playing_map(char name[], int level, char map[SIZE][SIZE]) {
     }
     printf("\n");
   }
+}
+
+void show_help() {
+  printf("=======================================\n");
+  printf("        S O K O B A N   H E L P        \n");
+  printf("=======================================\n");
+  printf("h(왼쪽), j(아래), k(위), l(오른쪽)\n");
+  printf("a(again)\n");
+  printf("n(new)\n");
+  printf("x(exit)\n");
+  printf("d(display help)\n");
+  printf("enter(redraw map)\n");
 }
