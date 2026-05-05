@@ -11,6 +11,8 @@ void show_option_screen();
 void show_name_screen();
 void show_complete_screen();
 void flush_stdin_line();
+bool validate_map(char[SIZE][SIZE]);
+void show_playing_map(char[], int, char[SIZE][SIZE]);
 
 int main(void) {
   char maps[MAX_LEVEL][SIZE][SIZE] = {{
@@ -52,17 +54,7 @@ int main(void) {
                                       }};
   // >>> validate map >>>
   for (int k = 0; k < MAX_LEVEL; k++) {
-    int box_cnt = 0, storage_cnt = 0;
-
-    for (int i = 0; i < SIZE; i++)
-      for (int j = 0; j < SIZE; j++) {
-        char block = maps[k][i][j];
-        if (block == '$')
-          box_cnt++;
-        else if (block == 'O')
-          storage_cnt++;
-      }
-    if (storage_cnt != box_cnt) {
+    if (!validate_map(maps[k])) {
       printf("Wrong level %d map\n", k + 1);
       return 0;
     }
@@ -122,17 +114,7 @@ int main(void) {
   bool is_first_game = true;
   bool is_gone_next_level = false;
   while (1) {
-    // >>> show playing_map >>>
-    printf("================\n");
-    printf(" %s in Level %d \n", name, playing_level + 1);
-    printf("================\n");
-    for (int i = 0; i < SIZE; i++) {
-      for (int j = 0; j < SIZE; j++) {
-        printf("%c", playing_map[i][j]);
-      }
-      printf("\n");
-    }
-    // <<< show playing_map <<<
+    show_playing_map(name, playing_level, playing_map);
 
     // >>> 참고 메시지 >>>
     if (is_first_game) {
@@ -281,4 +263,31 @@ void show_complete_screen() { printf("Good job! Continue (N/Y) "); }
 void flush_stdin_line() {
   int ch;
   while ((ch = getchar()) != '\n' && ch != EOF);
+}
+
+bool validate_map(char map[SIZE][SIZE]) {
+  int box_cnt = 0, storage_cnt = 0;
+  for (int i = 0; i < SIZE; i++)
+    for (int j = 0; j < SIZE; j++) {
+      char block = map[i][j];
+      if (block == '$')
+        box_cnt++;
+      else if (block == 'O')
+        storage_cnt++;
+    }
+  if (storage_cnt == box_cnt) return true;
+  return false;
+}
+
+void show_playing_map(char name[], int level, char map[SIZE][SIZE]) {
+  printf("================\n");
+  printf(" %s in Level %d \n", name, level);
+  printf("================\n");
+
+  for (int i = 0; i < SIZE; i++) {
+    for (int j = 0; j < SIZE; j++) {
+      printf("%c", map[i][j]);
+    }
+    printf("\n");
+  }
 }
