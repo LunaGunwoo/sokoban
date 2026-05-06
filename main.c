@@ -12,7 +12,7 @@ void show_name_screen();
 void show_complete_screen();
 void flush_stdin_line();
 bool validate_map(char[SIZE][SIZE]);
-void show_playing_map(char[], int, char[SIZE][SIZE]);
+void show_playing_map(char[], int, int, int, char[SIZE][SIZE]);
 void show_help();
 
 int main(void) {
@@ -86,9 +86,11 @@ int main(void) {
       playing_level = option - '1';
       break;
   }
-  // >>> play에서 필요한 변수들 >>>
+  // >>> play에서 필요한 변수들 (SET_PLAYING_MAP_BY_PLAYING_LEVEL 에서 사용하는
+  // 변수들) >>>
   char playing_map[SIZE][SIZE];
   bool box_dest_map[SIZE][SIZE];
+  int fitted_map_width, fitted_map_height;
   int left_box_cnt;
   int player_y, player_x;
   bool is_complete_level;
@@ -105,10 +107,21 @@ int main(void) {
 SET_PLAYING_MAP_BY_PLAYING_LEVEL:
   // >>> maps -> playing_map copy & player 위치 준비 >>>
   // only depend on (playing_level)
+  for (int i = 0; i < SIZE; i++)
+    if (maps[playing_level][0][i] == '\0') {
+      fitted_map_width = i;
+      break;
+    }
+  for (int i = 0; i < SIZE; i++)
+    if (maps[playing_level][i][0] == '\0') {
+      fitted_map_height = i;
+      break;
+    }
+
   left_box_cnt = 0;
   is_complete_level = false;
-  for (int i = 0; i < SIZE; i++) {
-    for (int j = 0; j < SIZE; j++) {
+  for (int i = 0; i < fitted_map_height; i++) {
+    for (int j = 0; j < fitted_map_width; j++) {
       playing_map[i][j] = maps[playing_level][i][j];
       if (playing_map[i][j] == '@') {
         player_y = i, player_x = j;
@@ -123,10 +136,14 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
   }
   // <<< maps -> playing_map copy & player 위치 준비 <<<
   while (1) {
-    if (is_showing_help)
+    if (is_showing_help) {
       show_help();
-    else
-      show_playing_map(name, playing_level + 1, playing_map);
+    } else {
+      show_playing_map(name, playing_level + 1, fitted_map_height,
+                       fitted_map_width, playing_map);
+    }
+
+    printf("\n\n");
 
     // >>> 참고 메시지 >>>
     if (is_first_game) {
@@ -303,13 +320,14 @@ bool validate_map(char map[SIZE][SIZE]) {
   return false;
 }
 
-void show_playing_map(char name[], int level, char map[SIZE][SIZE]) {
+void show_playing_map(char name[], int level, int height, int width,
+                      char map[SIZE][SIZE]) {
   printf("================\n");
   printf(" %s in Level %d \n", name, level);
   printf("================\n");
 
-  for (int i = 0; i < SIZE; i++) {
-    for (int j = 0; j < SIZE; j++) {
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
       printf("%c", map[i][j]);
     }
     printf("\n");
