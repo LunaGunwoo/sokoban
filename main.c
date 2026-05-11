@@ -182,6 +182,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       bool go_next_level = (user_input == 'y') ? true : false;
       if (go_next_level) {  // >>> next level로 이동 >>>
         playing_level++;
+        is_gone_next_level = true;
         goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
       }  // <<< next level로 이동 <<<
       else {
