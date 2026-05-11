@@ -76,6 +76,8 @@ int main(void) {
 
   switch (option) {
     case 'n':
+      playing_level = 0;
+      break;
     case 'f':
       // TODO
       break;
