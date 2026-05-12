@@ -97,6 +97,8 @@ int main(void) {
   int left_box_cnt;
   int player_y, player_x;
   bool is_complete_level;
+  int moves_cnt = 0;
+  int op;
   // <<< play에서 필요한 변수들 <<<
 
   // >>> 기타 명령어나 참고 메시지에 필요한 변수들 >>>
@@ -122,6 +124,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
     }
 
   left_box_cnt = 0;
+  op = ' ';
   is_complete_level = false;
   for (int i = 0; i < fitted_map_height; i++) {
     for (int j = 0; j < fitted_map_width; j++) {
@@ -166,6 +169,10 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       printf("\n");
     }
     // <<< 참고 메시지 <<<
+    // >>> Moves Command display >>>
+    printf("(Moves) %04d\n", moves_cnt);
+    printf("(Command) %c\n", op);
+    // <<< Moves Command display <<<
 
     // >>> Level Clear 한 경우 >>>
     if (is_complete_level) {
@@ -184,6 +191,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       bool go_next_level = (user_input == 'y') ? true : false;
       if (go_next_level) {  // >>> next level로 이동 >>>
         playing_level++;
+        moves_cnt = 0;
         goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
       }  // <<< next level로 이동 <<<
       else {
@@ -194,7 +202,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
     // <<< Level Clear 한 경우 <<<
 
     // >>> user 입력 >>>
-    int op = tolower(getch());
+    op = tolower(getch());
     int dy = 0, dx = 0;
     switch (op) {
       case 'h':
@@ -255,6 +263,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
           (box_dest_map[player_y][player_x]) ? 'O' : ' ';  // 이동 전 user 위치
       player_y = ny;
       player_x = nx;
+      moves_cnt++;
 
       if (left_box_cnt == 0)
         is_complete_level = true;  // Level Clear는 while 문 다시 시작할 때 처리
@@ -263,6 +272,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
     } else if (is_new) {
       playing_level = 0;
+      moves_cnt = 0;
       goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
     }
   }
