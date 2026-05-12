@@ -15,6 +15,7 @@ void flush_stdin_line();
 bool validate_map(char[SIZE][SIZE]);
 void show_playing_map(char[], int, int, int, char[SIZE][SIZE]);
 void show_help();
+void copy_map(char[SIZE][SIZE], char[SIZE][SIZE], int, int);
 
 int main(void) {
   char maps[MAX_LEVEL][SIZE][SIZE] = {{
@@ -101,12 +102,22 @@ int main(void) {
   int op;
   // <<< play에서 필요한 변수들 <<<
 
+  // >>> Undo 기능을 위한 변수 선언 >>>
+  char history_map[5][SIZE][SIZE];
+  int history_player_y[5];
+  int history_player_x[5];
+  int history_left_box_cnt[5];
+  int undo_count = 0;
+  int remain_undo_cnt = 5;
+  // <<< Undo 기능을 위한 변수 선언 <<<
+
   // >>> 기타 명령어나 참고 메시지에 필요한 변수들 >>>
   bool is_first_game = true;
   bool is_gone_next_level = false;
   bool is_showing_help = false;
   bool is_again = false;
   bool is_new = false;
+  bool is_undo = false;
   // <<< 기타 명령어나 참고 메시지에 필요한 변수들 <<<
 
 SET_PLAYING_MAP_BY_PLAYING_LEVEL:
@@ -124,11 +135,15 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
     }
 
   left_box_cnt = 0;
+  undo_count = 0;
+  remain_undo_cnt = 5;  // 레벨 시작/재시작 시 undo 기회 5번으로 초기화
   op = ' ';
   is_complete_level = false;
+
+  copy_map(playing_map, maps[playing_level], fitted_map_height,
+           fitted_map_width);
   for (int i = 0; i < fitted_map_height; i++) {
     for (int j = 0; j < fitted_map_width; j++) {
-      playing_map[i][j] = maps[playing_level][i][j];
       if (playing_map[i][j] == '@') {
         player_y = i, player_x = j;
       }
@@ -158,17 +173,21 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       printf("Welcome %s\n", name);
     } else if (is_gone_next_level) {
       is_gone_next_level = false;
-      printf("You are in the level %d, now.\n", playing_level);
+      printf("You are in the level %d, now.\n", playing_level + 1);
     } else if (is_again) {
       is_again = false;
       printf("Again\n");
     } else if (is_new) {
       is_new = false;
       printf("Replay from level %d\n", playing_level + 1);
+    } else if (is_undo) {
+      is_undo = false;
+      printf("Undid\n");
     } else {  // 참고메시지 때문에 UI가 위아래로 움직이는 문제 해결하기 위해
       printf("\n");
     }
     // <<< 참고 메시지 <<<
+
     // >>> Moves Command display >>>
     printf("(Moves) %04d\n", moves_cnt);
     printf("(Command) %c\n", op);
@@ -217,6 +236,9 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       case 'l':
         dx = 1;
         break;
+      case 'u':
+        is_undo = true;
+        break;
       case 'd':
         is_showing_help = true;
         break;
@@ -241,14 +263,42 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       int ny = player_y + dy;
       int nx = player_x + dx;
       if (playing_map[ny][nx] == '#') continue;
+
+      bool is_pushing_box = false;
+      int box_ny, box_nx;
+
       if (playing_map[ny][nx] == '$') {
-        int box_ny = ny + dy;
-        int box_nx = nx + dx;
+        box_ny = ny + dy;
+        box_nx = nx + dx;
         char next_block = playing_map[box_ny][box_nx];
         if (next_block == '#' || next_block == '$')
           continue;  // early return 박스 이동 불가한 경우 바로 다시 키 입력받기
 
-        // >>> 박스 이동 처리 >>>
+        is_pushing_box = true;
+      }
+
+      // >>> 이동 전 상태 Undo 배열에 저장 >>>
+      if (undo_count == 5) {
+        for (int k = 0; k < 4; k++) {
+          copy_map(history_map[k], history_map[k + 1], fitted_map_height,
+                   fitted_map_width);
+          history_player_y[k] = history_player_y[k + 1];
+          history_player_x[k] = history_player_x[k + 1];
+          history_left_box_cnt[k] = history_left_box_cnt[k + 1];
+        }
+        undo_count = 4;
+      }
+
+      copy_map(history_map[undo_count], playing_map, fitted_map_height,
+               fitted_map_width);
+      history_player_y[undo_count] = player_y;
+      history_player_x[undo_count] = player_x;
+      history_left_box_cnt[undo_count] = left_box_cnt;
+      undo_count++;
+      // <<< 이동 전 상태 Undo 배열에 저장 <<<
+
+      // >>> 박스 및 플레이어 이동 처리 >>>
+      if (is_pushing_box) {
         if (box_dest_map[box_ny][box_nx] != box_dest_map[ny][nx]) {
           if (box_dest_map[box_ny][box_nx])
             left_box_cnt--;
@@ -256,7 +306,6 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
             left_box_cnt++;
         }
         playing_map[box_ny][box_nx] = '$';
-        // <<< 박스 이동 처리 <<<
       }
       playing_map[ny][nx] = '@';
       playing_map[player_y][player_x] =
@@ -267,6 +316,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
 
       if (left_box_cnt == 0)
         is_complete_level = true;  // Level Clear는 while 문 다시 시작할 때 처리
+      // <<< 박스 및 플레이어 이동 처리 <<<
     }  // <<< 이동 조작키를 눌렀을 때 <<<
     else if (is_again) {
       goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
@@ -274,6 +324,21 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       playing_level = 0;
       moves_cnt = 0;
       goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
+    } else if (is_undo) {
+      if (remain_undo_cnt > 0 && undo_count > 0) {
+        undo_count--;
+
+        copy_map(playing_map, history_map[undo_count], fitted_map_height,
+                 fitted_map_width);
+        player_y = history_player_y[undo_count];
+        player_x = history_player_x[undo_count];
+        left_box_cnt = history_left_box_cnt[undo_count];
+
+        moves_cnt++;
+        remain_undo_cnt--;
+      } else {
+        is_undo = false;  // 실행 불가이므로 다음 턴에서 Undid 메시지 미출력
+      }
     }
   }
 
@@ -353,9 +418,19 @@ void show_help() {
   printf("        S O K O B A N   H E L P        \n");
   printf("=======================================\n");
   printf("h(왼쪽), j(아래), k(위), l(오른쪽)\n");
+  printf("u(undo)\n");
   printf("a(again)\n");
   printf("n(new)\n");
   printf("x(exit)\n");
   printf("d(display help)\n");
   printf("enter(redraw map)\n");
+}
+
+void copy_map(char dest[SIZE][SIZE], char src[SIZE][SIZE], int height,
+              int width) {
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      dest[i][j] = src[i][j];
+    }
+  }
 }
