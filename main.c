@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <termio.h>
 #define SIZE 30
 #define MAX_LEVEL 3
@@ -138,6 +139,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
   }
   // <<< maps -> playing_map copy & player 위치 준비 <<<
   while (1) {
+    system("clear");
     if (is_showing_help) {
       show_help();
     } else {
