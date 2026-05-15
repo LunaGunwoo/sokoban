@@ -2,7 +2,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <termio.h>
+#include <unistd.h>
 #define SIZE 30
 #define MAX_LEVEL 3
 
@@ -16,6 +18,7 @@ bool validate_map(char[SIZE][SIZE]);
 void show_playing_map(char[], int, int, int, char[SIZE][SIZE]);
 void show_help();
 void copy_map(char[SIZE][SIZE], char[SIZE][SIZE], int, int);
+void print_command_name(int op);
 
 int main(void) {
   char maps[MAX_LEVEL][SIZE][SIZE] = {{
@@ -111,6 +114,16 @@ int main(void) {
   int remain_undo_cnt = 5;
   // <<< Undo 기능을 위한 변수 선언 <<<
 
+  // >>> record, end, play 를 위한 변수 >>>
+  bool is_recording = false;
+  int record_frame = 0;
+  int recorded_map_width, recorded_map_height;
+  char recorded_map[100][SIZE][SIZE];
+  int recorded_moves[100];
+  char recorded_commands[100];  // (h/j/k/l/u, 프레임0은 ' ')
+  char last_record_op = ' ';
+  // <<< record, end, play 를 위한 변수 <<<
+
   // >>> 기타 명령어나 참고 메시지에 필요한 변수들 >>>
   bool is_first_game = true;
   bool is_gone_next_level = false;
@@ -118,6 +131,11 @@ int main(void) {
   bool is_again = false;
   bool is_new = false;
   bool is_undo = false;
+  bool is_stop_recording = false;
+  bool is_start_recording = false;
+  bool is_end_recording = false;
+  bool is_play = false;
+  bool is_exit = false;
   // <<< 기타 명령어나 참고 메시지에 필요한 변수들 <<<
 
 SET_PLAYING_MAP_BY_PLAYING_LEVEL:
@@ -139,6 +157,12 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
   remain_undo_cnt = 5;  // 레벨 시작/재시작 시 undo 기회 5번으로 초기화
   op = ' ';
   is_complete_level = false;
+
+  // >>> 레벨 시작/재시작 시 녹화 상태 초기화 >>>
+  is_recording = false;
+  record_frame = 0;
+  last_record_op = ' ';
+  // <<< 레벨 시작/재시작 시 녹화 상태 초기화 <<<
 
   copy_map(playing_map, maps[playing_level], fitted_map_height,
            fitted_map_width);
@@ -183,6 +207,13 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
     } else if (is_undo) {
       is_undo = false;
       printf("Undid\n");
+    } else if (is_recording && last_record_op != ' ') {
+      printf("recording...");
+      print_command_name(last_record_op);
+      printf("\n");
+    } else if (is_stop_recording) {
+      is_stop_recording = false;
+      printf("stop recording\n");
     } else {  // 참고메시지 때문에 UI가 위아래로 움직이는 문제 해결하기 위해
       printf("\n");
     }
@@ -211,6 +242,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       if (go_next_level) {  // >>> next level로 이동 >>>
         playing_level++;
         moves_cnt = 0;
+        is_gone_next_level = true;
         goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
       }  // <<< next level로 이동 <<<
       else {
@@ -246,8 +278,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
         is_showing_help = false;
         break;
       case 'x':
-        printf("Good bye\n");
-        return 0;
+        is_exit = true;
         break;
       case 'a':
         is_again = true;
@@ -255,11 +286,23 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       case 'n':
         is_new = true;
         break;
+      case 'r':
+        is_start_recording = true;
+        break;
+      case 'e':
+        is_end_recording = true;
+        break;
+      case 'p':
+        is_play = true;
+        break;
     }
     // <<< user 입력 <<<
 
-    if (dx != 0 || dy != 0) {  // >>> 이동 조작키를 눌렀을 때 >>>
-      // (이동 관련은 if문 안에서만 처리하기)
+    // >>> 명령 처리 >>>
+    if (is_exit) {
+      printf("Good bye\n");
+      return 0;
+    } else if (dx != 0 || dy != 0) {  // >>> 이동 조작키를 눌렀을 때 >>>
       int ny = player_y + dy;
       int nx = player_x + dx;
       if (playing_map[ny][nx] == '#') continue;
@@ -313,10 +356,25 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       player_y = ny;
       player_x = nx;
       moves_cnt++;
+      // <<< 박스 및 플레이어 이동 처리 <<<
+
+      // >>> 이동 후 상태를 녹화에 추가 >>>
+      if (is_recording) {
+        copy_map(recorded_map[record_frame], playing_map, recorded_map_height,
+                 recorded_map_width);
+        recorded_moves[record_frame] = moves_cnt;
+        recorded_commands[record_frame] = op;
+        last_record_op = op;
+        record_frame++;
+        if (record_frame >= 100) {
+          is_recording = false;
+          is_stop_recording = true;
+        }
+      }
+      // <<< 이동 후 상태를 녹화에 추가 <<<
 
       if (left_box_cnt == 0)
         is_complete_level = true;  // Level Clear는 while 문 다시 시작할 때 처리
-      // <<< 박스 및 플레이어 이동 처리 <<<
     }  // <<< 이동 조작키를 눌렀을 때 <<<
     else if (is_again) {
       goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
@@ -336,10 +394,77 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
 
         moves_cnt++;
         remain_undo_cnt--;
+
+        // >>> undo 도 녹화에 포함 >>>
+        if (is_recording) {
+          copy_map(recorded_map[record_frame], playing_map, recorded_map_height,
+                   recorded_map_width);
+          recorded_moves[record_frame] = moves_cnt;
+          recorded_commands[record_frame] = 'u';
+          last_record_op = 'u';
+          record_frame++;
+          if (record_frame >= 100) {
+            is_recording = false;
+            is_stop_recording = true;
+          }
+        }
+        // <<< undo 도 녹화에 포함 <<<
       } else {
         is_undo = false;  // 실행 불가이므로 다음 턴에서 Undid 메시지 미출력
       }
-    }
+    } else if (is_start_recording) {  // >>> 녹화 시작 처리 >>>
+      is_start_recording = false;
+      recorded_map_width = fitted_map_width;
+      recorded_map_height = fitted_map_height;
+      is_recording = true;
+      record_frame = 0;
+      // 현재 상태를 프레임 0으로 저장
+      copy_map(recorded_map[record_frame], playing_map, recorded_map_height,
+               recorded_map_width);
+      recorded_moves[record_frame] = moves_cnt;
+      recorded_commands[record_frame] = ' ';
+      record_frame++;
+      last_record_op = ' ';
+    }  // <<< 녹화 시작 처리 <<<
+    else if (is_end_recording) {  // >>> 녹화 종료 처리 >>>
+      is_end_recording = false;
+      if (is_recording) {
+        is_recording = false;
+        is_stop_recording = true;
+      }
+    }  // <<< 녹화 종료 처리 <<<
+    else if (is_play) {  // >>> 녹화 재생 처리 >>>
+      is_play = false;
+      if (record_frame > 0) {
+        for (int f = 0; f < record_frame; f++) {
+          system("clear");
+          show_playing_map(name, playing_level + 1, recorded_map_height,
+                           recorded_map_width, recorded_map[f]);
+          printf("\n\n");
+
+          if (f == record_frame - 1) {  // 마지막 프레임
+            printf("end playing...\n");
+            printf("(Moves) %04d\n", recorded_moves[f]);
+            printf("(Command)\n");
+          } else if (f == 0) {  // 첫 프레임 (녹화 시작 시점 상태)
+            printf("playing...\n");
+            printf("(Moves) %04d\n", recorded_moves[f]);
+            printf("(Command)\n");
+          } else {
+            printf("playing...");
+            print_command_name(recorded_commands[f]);
+            printf("\n");
+            printf("(Moves) %04d\n", recorded_moves[f]);
+            printf("(Command) %c\n", recorded_commands[f]);
+          }
+
+          sleep(1);
+        }
+        // 재생 종료 후 명령 표시를 비워서 다음 화면이 깔끔하게 보이도록
+        op = ' ';
+      }
+    }  // <<< 녹화 재생 처리 <<<
+    // <<< 명령 처리 <<<
   }
 
   return 0;
@@ -421,6 +546,9 @@ void show_help() {
   printf("u(undo)\n");
   printf("a(again)\n");
   printf("n(new)\n");
+  printf("r(record)\n");
+  printf("e(record end)\n");
+  printf("p(play recorded game)\n");
   printf("x(exit)\n");
   printf("d(display help)\n");
   printf("enter(redraw map)\n");
@@ -432,5 +560,25 @@ void copy_map(char dest[SIZE][SIZE], char src[SIZE][SIZE], int height,
     for (int j = 0; j < width; j++) {
       dest[i][j] = src[i][j];
     }
+  }
+}
+
+void print_command_name(int op) {
+  switch (op) {
+    case 'h':
+      printf("left");
+      break;
+    case 'j':
+      printf("down");
+      break;
+    case 'k':
+      printf("up");
+      break;
+    case 'l':
+      printf("right");
+      break;
+    case 'u':
+      printf("undo");
+      break;
   }
 }
