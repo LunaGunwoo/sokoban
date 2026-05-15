@@ -19,6 +19,7 @@ void show_playing_map(char[], int, int, int, char[SIZE][SIZE]);
 void show_help();
 void copy_map(char[SIZE][SIZE], char[SIZE][SIZE], int, int);
 void print_command_name(int op);
+void show_moves_n_command(int, int);
 
 int main(void) {
   char maps[MAX_LEVEL][SIZE][SIZE] = {{
@@ -219,10 +220,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
     }
     // <<< 참고 메시지 <<<
 
-    // >>> Moves Command display >>>
-    printf("(Moves) %04d\n", moves_cnt);
-    printf("(Command) %c\n", op);
-    // <<< Moves Command display <<<
+    show_moves_n_command(moves_cnt, op);
 
     // >>> Level Clear 한 경우 >>>
     if (is_complete_level) {
@@ -444,18 +442,15 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
 
           if (f == record_frame - 1) {  // 마지막 프레임
             printf("end playing...\n");
-            printf("(Moves) %04d\n", recorded_moves[f]);
-            printf("(Command)\n");
+            show_moves_n_command(recorded_moves[f], ' ');
           } else if (f == 0) {  // 첫 프레임 (녹화 시작 시점 상태)
             printf("playing...\n");
-            printf("(Moves) %04d\n", recorded_moves[f]);
-            printf("(Command)\n");
+            show_moves_n_command(recorded_moves[f], ' ');
           } else {
             printf("playing...");
             print_command_name(recorded_commands[f]);
             printf("\n");
-            printf("(Moves) %04d\n", recorded_moves[f]);
-            printf("(Command) %c\n", recorded_commands[f]);
+            show_moves_n_command(recorded_moves[f], recorded_commands[f]);
           }
 
           sleep(1);
@@ -581,4 +576,9 @@ void print_command_name(int op) {
       printf("undo");
       break;
   }
+}
+
+void show_moves_n_command(int moves_cnt, int op) {
+  printf("(Moves) %04d\n", moves_cnt);
+  printf("(Command) %c\n", op);
 }
