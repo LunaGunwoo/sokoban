@@ -607,7 +607,7 @@ void save_ranking(char name[], int level, int move_cnt) {
   int rank_cnt[MAX_LEVEL] = {0};
 
   // >>> 파일 읽기 >>>
-  FILE* in = fopen("ranking", "r");
+  FILE* in = fopen("ranking.txt", "r");
   if (in != NULL) {
     int lv, mv;
     char nm[5];
@@ -650,7 +650,7 @@ void save_ranking(char name[], int level, int move_cnt) {
   // <<< 버블정렬 <
 
   // >>> 파일 쓰기 >>>
-  FILE* out = fopen("ranking", "w");
+  FILE* out = fopen("ranking.txt", "w");
   for (int i = 0; i < MAX_LEVEL; i++) {
     for (int j = 0; j < rank_cnt[i]; j++) {
       fprintf(out, "%d %s %d\n", i + 1, rank_name[i][j], rank_move[i][j]);
@@ -669,7 +669,7 @@ void show_ranking() {
   int rank_move[MAX_LEVEL][5];
   int rank_cnt[MAX_LEVEL] = {0};
 
-  FILE* in = fopen("ranking", "r");
+  FILE* in = fopen("ranking.txt", "r");
   if (in != NULL) {
     int lv, mv;
     char nm[5];
