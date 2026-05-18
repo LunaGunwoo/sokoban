@@ -9,7 +9,7 @@
 #define MAX_LEVEL 3
 
 int getch(void);
-void show_inital_screen();
+void show_initial_screen();
 void show_option_screen();
 void show_name_screen();
 void show_complete_screen();
@@ -82,7 +82,7 @@ int main(void) {
   char name[4];
   int playing_level;
 
-  show_inital_screen();
+  show_initial_screen();
   show_option_screen();
   scanf("%c", &option);
   option = tolower(option);
@@ -503,7 +503,7 @@ int getch(void) {
   return ch;
 }
 
-void show_inital_screen() {
+void show_initial_screen() {
   printf("=======================================\n");
   printf("       S   O   K   O   B   A   N       \n");
   printf("=======================================\n");
