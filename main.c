@@ -191,7 +191,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
     }
   }
   // <<< maps -> playing_map copy & player 위치 준비 <<<
-  while (1) {
+  while (op != EOF) {
     system("clear");
     if (is_showing_help) {
       show_help();
