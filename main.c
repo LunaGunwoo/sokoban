@@ -20,20 +20,29 @@ void show_help();
 void copy_map(char[SIZE][SIZE], char[SIZE][SIZE], int, int);
 void print_command_name(int op);
 void show_moves_n_command(int, int);
+void save_ranking(char[], int, int);
+void show_ranking();
 
 int main(void) {
   char maps[MAX_LEVEL][SIZE][SIZE] = {{
-                                          "    #####          ",
-                                          "    #   #          ",
-                                          "    #$  #          ",
-                                          "  ###  $##         ",
-                                          "  #  $ $ #         ",
-                                          "### # ## #   ######",
-                                          "#   # ## #####  OO#",
-                                          "# $  $          OO#",
-                                          "##### ### #@##  OO#",
-                                          "    #     #########",
-                                          "    #######        ",
+                                          /* "    #####          ",
+                                              "    #   #          ",
+                                              "    #$  #          ",
+                                              "  ###  $##         ",
+                                              "  #  $ $ #         ",
+                                              "### # ## #   ######",
+                                              "#   # ## #####  OO#",
+                                              "# $  $          OO#",
+                                              "##### ### #@##  OO#",
+                                              "    #     #########",
+                                              "    #######        ",*/
+                                          "#######",
+                                          "#@    #",
+                                          "#  $  #",
+                                          "#  O  #",
+                                          "#  $  #",
+                                          "#  O  #",
+                                          "#######",
                                       },
                                       {
                                           "############  ",
@@ -59,6 +68,7 @@ int main(void) {
                                           "#OOOO  ##########",
                                           "########         ",
                                       }};
+
   // >>> validate map >>>
   for (int k = 0; k < MAX_LEVEL; k++) {
     if (!validate_map(maps[k])) {
@@ -225,6 +235,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
     // >>> Level Clear 한 경우 >>>
     if (is_complete_level) {
       if (playing_level + 1 >= MAX_LEVEL) {  // 모든 Level clear 한 경우
+        save_ranking(name, playing_level + 1, moves_cnt);
         printf("No more level\n");
         printf("Good bye\n");
         return 0;
@@ -238,12 +249,14 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
 
       bool go_next_level = (user_input == 'y') ? true : false;
       if (go_next_level) {  // >>> next level로 이동 >>>
+        save_ranking(name, playing_level + 1, moves_cnt);
         playing_level++;
         moves_cnt = 0;
         is_gone_next_level = true;
         goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
       }  // <<< next level로 이동 <<<
       else {
+        save_ranking(name, playing_level + 1, moves_cnt);
         printf("Good bye!!\n");
         return 0;
       }
@@ -292,6 +305,10 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
         break;
       case 'p':
         is_play = true;
+        break;
+      case 't':
+        show_ranking();
+        sleep(3);
         break;
     }
     // <<< user 입력 <<<
@@ -546,6 +563,7 @@ void show_help() {
   printf("p(play recorded game)\n");
   printf("x(exit)\n");
   printf("d(display help)\n");
+  printf("t(top)\n");
   printf("enter(redraw map)\n");
 }
 
@@ -581,4 +599,99 @@ void print_command_name(int op) {
 void show_moves_n_command(int moves_cnt, int op) {
   printf("(Moves) %04d\n", moves_cnt);
   printf("(Command) %c\n", op);
+}
+
+void save_ranking(char name[], int level, int move_cnt) {
+  char rank_name[MAX_LEVEL][5][5];
+  int rank_move[MAX_LEVEL][5];
+  int rank_cnt[MAX_LEVEL] = {0};
+
+  // >>> 파일 읽기 >>>
+  FILE* in = fopen("ranking", "r");
+  if (in != NULL) {
+    int lv, mv;
+    char nm[5];
+    while (fscanf(in, "%d %4s %d", &lv, nm, &mv) == 3) {
+      lv--;
+      if (rank_cnt[lv] < 5) {
+        for (int i = 0; i < 5; i++) rank_name[lv][rank_cnt[lv]][i] = nm[i];
+        rank_move[lv][rank_cnt[lv]] = mv;
+        rank_cnt[lv]++;
+      }
+    }
+    fclose(in);
+  }
+  // <<< 파일 읽기 <
+
+  // >>> 새 기록 추가 >>>
+  int lv = level - 1;
+  if (rank_cnt[lv] < 5) {
+    for (int i = 0; i < 5; i++) rank_name[lv][rank_cnt[lv]][i] = name[i];
+    rank_move[lv][rank_cnt[lv]] = move_cnt;
+    rank_cnt[lv]++;
+  }
+  // <<< 새 기록 추가 <
+
+  // >>> 이동횟수 버블정렬 >>>
+  for (int i = 0; i < rank_cnt[lv] - 1; i++) {
+    for (int j = 0; j < rank_cnt[lv] - 1 - i; j++) {
+      if (rank_move[lv][j] > rank_move[lv][j + 1]) {
+        int tmp = rank_move[lv][j];
+        rank_move[lv][j] = rank_move[lv][j + 1];
+        rank_move[lv][j + 1] = tmp;
+        char tmp_name[5];
+        for (int k = 0; k < 5; k++) tmp_name[k] = rank_name[lv][j][k];
+        for (int k = 0; k < 5; k++)
+          rank_name[lv][j][k] = rank_name[lv][j + 1][k];
+        for (int k = 0; k < 5; k++) rank_name[lv][j + 1][k] = tmp_name[k];
+      }
+    }
+  }
+  // <<< 버블정렬 <
+
+  // >>> 파일 쓰기 >>>
+  FILE* out = fopen("ranking", "w");
+  for (int i = 0; i < MAX_LEVEL; i++) {
+    for (int j = 0; j < rank_cnt[i]; j++) {
+      fprintf(out, "%d %s %d\n", i + 1, rank_name[i][j], rank_move[i][j]);
+    }
+  }
+  fclose(out);
+  // <<< 파일 쓰기 <
+}
+
+void show_ranking() {
+  printf("=================\n");
+  printf("  R A N K I N G  \n");
+  printf("=================\n");
+
+  char rank_name[MAX_LEVEL][5][5];
+  int rank_move[MAX_LEVEL][5];
+  int rank_cnt[MAX_LEVEL] = {0};
+
+  FILE* in = fopen("ranking", "r");
+  if (in != NULL) {
+    int lv, mv;
+    char nm[5];
+    while (fscanf(in, "%d %4s %d", &lv, nm, &mv) == 3) {
+      lv--;
+      if (rank_cnt[lv] < 5) {
+        for (int i = 0; i < 5; i++) rank_name[lv][rank_cnt[lv]][i] = nm[i];
+        rank_move[lv][rank_cnt[lv]] = mv;
+        rank_cnt[lv]++;
+      }
+    }
+    fclose(in);
+  }
+
+  for (int i = 0; i < MAX_LEVEL; i++) {
+    printf("*** LEVEL %d ***\n", i + 1);
+    if (rank_cnt[i] == 0) {
+      printf("NONE\n");
+    } else {
+      for (int j = 0; j < rank_cnt[i]; j++) {
+        printf("%s %d\n", rank_name[i][j], rank_move[i][j]);
+      }
+    }
+  }
 }
