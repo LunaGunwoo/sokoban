@@ -7,6 +7,9 @@
 #include <unistd.h>
 #define SIZE 30
 #define MAX_LEVEL 3
+#define GAME 0
+#define HELP 1
+#define RANK 2
 
 int getch(void);
 void show_initial_screen();
@@ -136,9 +139,9 @@ int main(void) {
   // <<< record, end, play 를 위한 변수 <<<
 
   // >>> 기타 명령어나 참고 메시지에 필요한 변수들 >>>
+  int showing_display = GAME;
   bool is_first_game = true;
   bool is_gone_next_level = false;
-  bool is_showing_help = false;
   bool is_again = false;
   bool is_new = false;
   bool is_undo = false;
@@ -193,11 +196,17 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
   // <<< maps -> playing_map copy & player 위치 준비 <<<
   while (op != EOF) {
     system("clear");
-    if (is_showing_help) {
-      show_help();
-    } else {
-      show_playing_map(name, playing_level + 1, fitted_map_height,
-                       fitted_map_width, playing_map);
+    switch (showing_display) {
+      case GAME:
+        show_playing_map(name, playing_level + 1, fitted_map_height,
+                         fitted_map_width, playing_map);
+        break;
+      case HELP:
+        show_help();
+        break;
+      case RANK:
+        show_ranking();
+        break;
     }
 
     printf("\n\n");
@@ -283,10 +292,13 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
         is_undo = true;
         break;
       case 'd':
-        is_showing_help = true;
+        showing_display = HELP;
         break;
       case '\n':
-        is_showing_help = false;
+        showing_display = GAME;
+        break;
+      case 't':
+        showing_display = RANK;
         break;
       case 'x':
         is_exit = true;
@@ -305,10 +317,6 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
         break;
       case 'p':
         is_play = true;
-        break;
-      case 't':
-        show_ranking();
-        sleep(3);
         break;
     }
     // <<< user 입력 <<<
@@ -661,9 +669,9 @@ void save_ranking(char name[], int level, int move_cnt) {
 }
 
 void show_ranking() {
-  printf("=================\n");
-  printf("  R A N K I N G  \n");
-  printf("=================\n");
+  printf("===============\n");
+  printf(" R A N K I N G \n");
+  printf("===============\n");
 
   char rank_name[MAX_LEVEL][5][5];
   int rank_move[MAX_LEVEL][5];
