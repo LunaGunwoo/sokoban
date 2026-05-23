@@ -12,7 +12,7 @@
 #define RANK 2
 
 int getch(void);
-void show_initial_screen();
+void show_initial_screen(int);
 void show_option_screen();
 void show_name_screen();
 void show_complete_screen();
@@ -24,7 +24,7 @@ void copy_map(char[SIZE][SIZE], char[SIZE][SIZE], int, int);
 void print_command_name(int op);
 void show_moves_n_command(int, int);
 void save_ranking(char[], int, int);
-void show_ranking();
+void show_ranking(int);
 int get_last_level_and_load_map(char[MAX_LEVEL][SIZE][SIZE]);
 
 int main(void) {
@@ -54,7 +54,7 @@ int main(void) {
   char name[4];
   int playing_level;
 
-  show_initial_screen();
+  show_initial_screen(last_level);
   show_option_screen();
   scanf("%c", &option);
   option = tolower(option);
@@ -62,19 +62,16 @@ int main(void) {
   scanf("%s", name);
   flush_stdin_line();
 
-  switch (option) {
-    case 'n':
-      playing_level = 0;
-      break;
-    case 'f':
-      // TODO
-      break;
-      return 0;
-    case '1':
-    case '2':
-    case '3':
-      playing_level = option - '1';
-      break;
+  if (option == 'n') {
+    playing_level = 0;
+  } else if (option == 'f') {
+    // TODO
+    return 0;
+  } else if (1 <= option - '0' && option - '0' <= last_level) {
+    playing_level = option - '1';
+  } else {
+    // TODO
+    return 0;
   }
   // >>> play에서 필요한 변수들 (SET_PLAYING_MAP_BY_PLAYING_LEVEL 에서 사용하는
   // 변수들) >>>
@@ -174,7 +171,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
         show_help();
         break;
       case RANK:
-        show_ranking();
+        show_ranking(last_level);
         break;
     }
 
@@ -212,7 +209,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
 
     // >>> Level Clear 한 경우 >>>
     if (is_complete_level) {
-      if (playing_level + 1 >= MAX_LEVEL) {  // 모든 Level clear 한 경우
+      if (playing_level + 1 >= last_level) {  // 모든 Level clear 한 경우
         save_ranking(name, playing_level + 1, moves_cnt);
         printf("No more level\n");
         printf("Good bye\n");
@@ -480,14 +477,14 @@ int getch(void) {
   return ch;
 }
 
-void show_initial_screen() {
+void show_initial_screen(int last_level) {
   printf("=======================================\n");
   printf("       S   O   K   O   B   A   N       \n");
   printf("=======================================\n");
   printf("\n");
   printf("n : New Game\n");
   printf("f : File load\n");
-  printf("1~3 : Level Number\n");
+  printf("1~%d : Level Number\n", last_level);
   printf("\n\n");
 }
 
@@ -641,7 +638,7 @@ void save_ranking(char name[], int level, int move_cnt) {
   // <<< 파일 쓰기 <
 }
 
-void show_ranking() {
+void show_ranking(int last_level) {
   printf("===============\n");
   printf(" R A N K I N G \n");
   printf("===============\n");
@@ -665,7 +662,7 @@ void show_ranking() {
     fclose(in);
   }
 
-  for (int i = 0; i < MAX_LEVEL; i++) {
+  for (int i = 0; i < last_level; i++) {
     printf("*** LEVEL %d ***\n", i + 1);
     if (rank_cnt[i] == 0) {
       printf("NONE\n");
