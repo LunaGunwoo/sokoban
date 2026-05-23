@@ -43,6 +43,12 @@ int main(void) {
     }
   }
   // <<< validate map <<<
+  // >>> '.' to ' ' >>>
+  for (int i = 0; i < last_level; i++)
+    for (int j = 0; j < SIZE; j++)
+      for (int k = 0; k < SIZE; k++)
+        if (maps[i][j][k] == '.') maps[i][j][k] = ' ';
+  // <<< '.' to ' ' <<<
 
   char option;
   char name[4];
