@@ -29,7 +29,7 @@ int get_last_level_and_load_map(char[MAX_LEVEL][SIZE][SIZE]);
 
 int main(void) {
   int last_level;
-  char maps[MAX_LEVEL][SIZE][SIZE];
+  char maps[MAX_LEVEL][SIZE][SIZE] = {0};
   last_level = get_last_level_and_load_map(maps);
   if (last_level == -1) {
     printf("map.txt 파일이 없습니다.\n");
@@ -502,6 +502,10 @@ bool validate_map(char map[SIZE][SIZE]) {
         box_cnt++;
       else if (block == 'O')
         storage_cnt++;
+      else if (block == '\0')
+        continue;
+      else if (!(block == '.' || block == '@' || block == '#'))
+        return false;
     }
   if (storage_cnt == box_cnt) return true;
   return false;
@@ -678,8 +682,6 @@ int get_last_level_and_load_map(char maps[MAX_LEVEL][SIZE][SIZE]) {
   while (1) {
     fscanf(f, "%s", line);
     if (strcmp(line, "s") == 0) {
-      if (last_level > 0)  // fitted_width, fitted_height 추출을 위해
-        strcpy(maps[last_level - 1][height], "");
       last_level++;
       height = 0;
     } else if (strcmp(line, "e") == 0) {
