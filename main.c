@@ -6,7 +6,7 @@
 #include <termio.h>
 #include <unistd.h>
 #define SIZE 30
-#define MAX_LEVEL 3
+#define MAX_LEVEL 5
 #define GAME 0
 #define HELP 1
 #define RANK 2
@@ -25,57 +25,20 @@ void print_command_name(int op);
 void show_moves_n_command(int, int);
 void save_ranking(char[], int, int);
 void show_ranking();
+int get_last_level_and_load_map(char[MAX_LEVEL][SIZE][SIZE]);
 
 int main(void) {
-  char maps[MAX_LEVEL][SIZE][SIZE] = {{
-                                          /* "    #####          ",
-                                              "    #   #          ",
-                                              "    #$  #          ",
-                                              "  ###  $##         ",
-                                              "  #  $ $ #         ",
-                                              "### # ## #   ######",
-                                              "#   # ## #####  OO#",
-                                              "# $  $          OO#",
-                                              "##### ### #@##  OO#",
-                                              "    #     #########",
-                                              "    #######        ",*/
-                                          "#######",
-                                          "#@    #",
-                                          "#  $  #",
-                                          "#  O  #",
-                                          "#  $  #",
-                                          "#  O  #",
-                                          "#######",
-                                      },
-                                      {
-                                          "############  ",
-                                          "#OO  #     ###",
-                                          "#OO  # $  $  #",
-                                          "#OO  #$####  #",
-                                          "#OO    @ ##  #",
-                                          "#OO  # #  $ ##",
-                                          "###### ##$ $ #",
-                                          "  # $  $ $ $ #",
-                                          "  #    #     #",
-                                          "  ############",
-                                      },
-                                      {
-                                          "        ######## ",
-                                          "        #     @# ",
-                                          "        # $#$ ## ",
-                                          "        # $  $#  ",
-                                          "        ##$ $ #  ",
-                                          "######### $ # ###",
-                                          "#OOOO  ## $  $  #",
-                                          "##OOO    $  $   #",
-                                          "#OOOO  ##########",
-                                          "########         ",
-                                      }};
-
+  int last_level;
+  char maps[MAX_LEVEL][SIZE][SIZE];
+  last_level = get_last_level_and_load_map(maps);
+  if (last_level == -1) {
+    printf("map.txt 파일이 없습니다.\n");
+    return 0;
+  }
   // >>> validate map >>>
-  for (int k = 0; k < MAX_LEVEL; k++) {
-    if (!validate_map(maps[k])) {
-      printf("Wrong level %d map\n", k + 1);
+  for (int i = 0; i < last_level; i++) {
+    if (!validate_map(maps[i])) {
+      printf("Wrong level %d map\n", i + 1);
       return 0;
     }
   }
@@ -702,4 +665,30 @@ void show_ranking() {
       }
     }
   }
+}
+
+int get_last_level_and_load_map(char maps[MAX_LEVEL][SIZE][SIZE]) {
+  FILE* f;
+  f = fopen("map.txt", "r");
+  if (f == NULL) return -1;
+
+  int last_level = 0;
+  int height = 0;
+  char line[SIZE];
+  while (1) {
+    fscanf(f, "%s", line);
+    if (strcmp(line, "s") == 0) {
+      if (last_level > 0)  // fitted_width, fitted_height 추출을 위해
+        strcpy(maps[last_level - 1][height], "");
+      last_level++;
+      height = 0;
+    } else if (strcmp(line, "e") == 0) {
+      break;
+    } else {
+      strcpy(maps[last_level - 1][height], line);
+      height++;
+    }
+  }
+  fclose(f);
+  return last_level;
 }
