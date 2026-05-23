@@ -5,7 +5,7 @@
 #include <string.h>
 #include <termio.h>
 #include <unistd.h>
-#define SIZE 30
+#define SIZE 31
 #define MAX_LEVEL 5
 #define GAME 0
 #define HELP 1
