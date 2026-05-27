@@ -23,6 +23,7 @@ CMakeUserPresets.json
 *.exe
 sokoban
 ranking.txt
+soko
 
 # CLion
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
