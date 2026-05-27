@@ -24,6 +24,7 @@ void copy_map(char[SIZE][SIZE], char[SIZE][SIZE], int, int);
 void print_command_name(int op);
 void show_moves_n_command(int, int);
 void save_ranking(char[], int, int);
+void save_game(char[], int, int, int, int, char[SIZE][SIZE]);
 void show_ranking(int);
 int get_last_level_and_load_map(char[MAX_LEVEL][SIZE][SIZE]);
 
@@ -52,22 +53,26 @@ int main(void) {
 
   char option;
   char name[4];
-  int playing_level;
+  int playing_level = 0;
+  bool load_on_start = false;
 
   show_initial_screen(last_level);
   show_option_screen();
   scanf("%c", &option);
   option = tolower(option);
-  show_name_screen();
-  scanf("%s", name);
-  flush_stdin_line();
 
-  if (option == 'n') {
+  if (option == 'f') {
+    flush_stdin_line();
+    load_on_start = true;
+  } else if (option == 'n') {
+    show_name_screen();
+    scanf("%s", name);
+    flush_stdin_line();
     playing_level = 0;
-  } else if (option == 'f') {
-    // TODO
-    return 0;
   } else if (1 <= option - '0' && option - '0' <= last_level) {
+    show_name_screen();
+    scanf("%s", name);
+    flush_stdin_line();
     playing_level = option - '1';
   } else {
     // TODO
@@ -116,7 +121,78 @@ int main(void) {
   bool is_end_recording = false;
   bool is_play = false;
   bool is_exit = false;
+  bool is_save = false;
+  bool is_file_load = false;
+  bool is_saved = false;
+  bool is_loaded = false;
   // <<< 기타 명령어나 참고 메시지에 필요한 변수들 <<<
+
+  // >>> f 옵션이면 저장된 게임 불러오기, 그 외에는 일반 셋업으로 >>>
+  if (!load_on_start) goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
+
+LOAD_SAVED_GAME: {
+  FILE* soko_in = fopen("soko", "r");
+  if (soko_in == NULL) {
+    if (load_on_start) {  // 초기 화면에서 불러오기인데 파일이 없는 경우
+      printf("soko 파일이 없습니다.\n");
+      return 0;
+    }
+    goto START_GAME_LOOP;  // 게임 중 불러오기인데 파일이 없으면 현재 상태 유지
+  }
+  // 첫 줄: 이름, 레벨(0-기준), 이동 횟수
+  fscanf(soko_in, "%3s %d %d", name, &playing_level, &moves_cnt);
+
+  // 저장한 레벨의 원본 맵에서 맵 크기와 보관장소 위치를 복원
+  for (int i = 0; i < SIZE; i++)
+    if (maps[playing_level][0][i] == '\0') {
+      fitted_map_width = i;
+      break;
+    }
+  for (int i = 0; i < SIZE; i++)
+    if (maps[playing_level][i][0] == '\0') {
+      fitted_map_height = i;
+      break;
+    }
+
+  // 저장된 맵을 한 줄씩 읽어 복원 ('.' -> ' ')
+  char soko_line[SIZE];
+  for (int i = 0; i < fitted_map_height; i++) {
+    fscanf(soko_in, "%s", soko_line);
+    for (int j = 0; j < fitted_map_width; j++)
+      playing_map[i][j] = (soko_line[j] == '.') ? ' ' : soko_line[j];
+  }
+  fclose(soko_in);
+
+  // 보관장소(box_dest_map), 남은 박스 수, 플레이어 위치 재계산
+  // 보관장소는 원본 맵의 'O' 위치이며 게임 중 변하지 않음
+  left_box_cnt = 0;
+  for (int i = 0; i < fitted_map_height; i++)
+    for (int j = 0; j < fitted_map_width; j++) {
+      box_dest_map[i][j] = (maps[playing_level][i][j] == 'O');
+      if (playing_map[i][j] == '@') {
+        player_y = i;
+        player_x = j;
+      }
+      // 보관장소인데 박스가 없으면 아직 채워야 할 칸
+      if (box_dest_map[i][j] && playing_map[i][j] != '$') left_box_cnt++;
+    }
+
+  // 불러온 직후 undo/녹화 상태 초기화
+  undo_count = 0;
+  remain_undo_cnt = 5;
+  is_complete_level = false;
+  is_recording = false;
+  record_frame = 0;
+  last_record_op = ' ';
+  op = ' ';
+
+  if (load_on_start)
+    load_on_start = false;  // 초기 화면 로드는 Welcome 메시지를 사용
+  else
+    is_loaded = true;  // 게임 진행 중 로드는 Loaded 메시지를 출력
+}
+  goto START_GAME_LOOP;
+  // <<< f 옵션이면 저장된 게임 불러오기 <<<
 
 SET_PLAYING_MAP_BY_PLAYING_LEVEL:
   // >>> maps -> playing_map copy & player 위치 준비 >>>
@@ -160,6 +236,7 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
     }
   }
   // <<< maps -> playing_map copy & player 위치 준비 <<<
+START_GAME_LOOP:
   while (op != EOF) {
     system("clear");
     switch (showing_display) {
@@ -193,6 +270,12 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
     } else if (is_undo) {
       is_undo = false;
       printf("Undid\n");
+    } else if (is_saved) {
+      is_saved = false;
+      printf("Saved\n");
+    } else if (is_loaded) {
+      is_loaded = false;
+      printf("Loaded\n");
     } else if (is_recording && last_record_op != ' ') {
       printf("recording...");
       print_command_name(last_record_op);
@@ -283,6 +366,12 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
         break;
       case 'p':
         is_play = true;
+        break;
+      case 's':
+        is_save = true;
+        break;
+      case 'f':
+        is_file_load = true;
         break;
     }
     // <<< user 입력 <<<
@@ -401,6 +490,14 @@ SET_PLAYING_MAP_BY_PLAYING_LEVEL:
       } else {
         is_undo = false;  // 실행 불가이므로 다음 턴에서 Undid 메시지 미출력
       }
+    } else if (is_save) {  // 저장 처리
+      is_save = false;
+      save_game(name, playing_level, moves_cnt, fitted_map_height,
+                fitted_map_width, playing_map);
+      is_saved = true;
+    } else if (is_file_load) {  // 불러오기 처리
+      is_file_load = false;
+      goto LOAD_SAVED_GAME;
     } else if (is_start_recording) {  // >>> 녹화 시작 처리 >>>
       is_start_recording = false;
       recorded_map_width = fitted_map_width;
@@ -540,6 +637,8 @@ void show_help() {
   printf("e(record end)\n");
   printf("p(play recorded game)\n");
   printf("x(exit)\n");
+  printf("s(save)\n");
+  printf("f(file load)\n");
   printf("d(display help)\n");
   printf("t(top)\n");
   printf("enter(redraw map)\n");
@@ -636,6 +735,27 @@ void save_ranking(char name[], int level, int move_cnt) {
   }
   fclose(out);
   // <<< 파일 쓰기 <
+}
+
+void save_game(char name[], int playing_level, int moves_cnt, int height,
+               int width, char playing_map[SIZE][SIZE]) {
+  FILE* out = fopen("soko", "w");
+  if (out == NULL) return;
+  /* 첫 줄
+  이름, 레벨(0-기준), 이동 횟수
+  */
+  fprintf(out, "%s %d %d\n", name, playing_level, moves_cnt);
+  /* 이후
+  현재 맵 (공백 ' ' 은 '.' 로 저장하여 읽을 때 공백 손실 방지)
+  */
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      char block = playing_map[i][j];
+      fprintf(out, "%c", (block == ' ') ? '.' : block);
+    }
+    fprintf(out, "\n");
+  }
+  fclose(out);
 }
 
 void show_ranking(int last_level) {
