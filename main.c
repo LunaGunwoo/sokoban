@@ -131,10 +131,10 @@ int main(void) {
   if (!load_on_start) goto SET_PLAYING_MAP_BY_PLAYING_LEVEL;
 
 LOAD_SAVED_GAME: {
-  FILE* soko_in = fopen("soko", "r");
+  FILE* soko_in = fopen("soko.txt", "r");
   if (soko_in == NULL) {
     if (load_on_start) {  // 초기 화면에서 불러오기인데 파일이 없는 경우
-      printf("soko 파일이 없습니다.\n");
+      printf("soko.txt 파일이 없습니다.\n");
       return 0;
     }
     goto START_GAME_LOOP;  // 게임 중 불러오기인데 파일이 없으면 현재 상태 유지
@@ -739,7 +739,7 @@ void save_ranking(char name[], int level, int move_cnt) {
 
 void save_game(char name[], int playing_level, int moves_cnt, int height,
                int width, char playing_map[SIZE][SIZE]) {
-  FILE* out = fopen("soko", "w");
+  FILE* out = fopen("soko.txt", "w");
   if (out == NULL) return;
   /* 첫 줄
   이름, 레벨(0-기준), 이동 횟수
